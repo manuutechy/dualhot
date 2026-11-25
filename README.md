@@ -4,6 +4,10 @@
 
 Most Linux hotspot tools turn your WiFi off when the hotspot starts. `dualhot` uses a trick modern WiFi chips support: the one chip acts as a client *and* a hotspot at the same time. If your chip can't, it tells you, and falls back to a second adapter or a cable.
 
+**App window:** run `dualhot gui`. A page opens with a name, a password and one big on/off button, plus a live list of connected devices. The system password prompt (polkit) appears when you turn it on; turning it off asks nothing more.
+
+Or use the terminal:
+
 ```
 $ dualhot doctor          # can this machine do it? (no root needed)
 $ sudo dualhot start --ssid MyHotspot --pass supersecret
@@ -56,10 +60,12 @@ Steps `start` performs: create `ap0` → `hostapd` broadcasts the network → `d
 
 ## Safety
 
+The app window listens only on `127.0.0.1` with a secret token, so other websites and other users on the machine cannot control it.
+
 `dualhot` never edits your firewall or NetworkManager profiles. It adds its own nftables tables (`dualhot_nat`, `dualhot_fw`) and marks only the hotspot interface as unmanaged, and removes both on stop. Check any change first with `--dry-run`.
 
 ## Status
 
-Early (v0.1). The detection logic and planning are unit-tested; real-hardware reports are welcome: run `dualhot doctor` and open an issue with the output.
+Early (v0.2). The detection logic and planning are unit-tested; real-hardware reports are welcome: run `dualhot doctor` and open an issue with the output.
 
 MIT licence.

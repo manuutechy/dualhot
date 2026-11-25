@@ -39,7 +39,7 @@ func statePath() string { return filepath.Join(RunDir, "state.json") }
 func (s *State) Save() {
 	_ = os.MkdirAll(RunDir, 0755)
 	b, _ := json.MarshalIndent(s, "", "  ")
-	_ = os.WriteFile(statePath(), b, 0600)
+	_ = os.WriteFile(statePath(), b, 0644)
 }
 
 // LoadState reads the state file (nil if not running).
@@ -57,7 +57,8 @@ func LoadState() *State {
 
 // Alive reports whether a process exists.
 func Alive(pid int) bool {
-	return pid > 0 && syscall.Kill(pid, 0) == nil
+	err := syscall.Kill(pid, 0)
+	return pid > 0 && (err == nil || err == syscall.EPERM)
 }
 
 func kill(pid int) {

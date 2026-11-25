@@ -128,6 +128,13 @@ func Start(ctx context.Context, r sys.Runner, cfg Config, plan Plan, logf func(s
 			return err
 		}
 	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	if !r.DryRun {
+		if ln := listenControl(cancel); ln != nil {
+			defer ln.Close()
+		}
+	}
 	st := &State{PID: os.Getpid(), Mode: plan.Mode, SSID: cfg.SSID, AP: plan.AP, Base: plan.Base,
 		Subnet: subnet, Channel: plan.Channel, Started: time.Now().Unix()}
 	ok := false

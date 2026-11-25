@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dualhot</title>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#fff; --ink:#15181d; --mute:#6a7280; --line:#e3e6ea;
+  --accent:#0f9d6b; --accent-ink:#fff; --danger:#c8372d; --warn:#9a6700; --chip:#eef0f3;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0f1114; --card:#171a1f; --ink:#eceff3; --mute:#8b93a1; --line:#262b33;
+        --accent:#2bc48a; --accent-ink:#06130d; --danger:#ff6b5e; --warn:#e3b341; --chip:#20242b}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  min-height:100vh;display:flex;justify-content:center;padding:32px 16px}
+main{width:100%;max-width:440px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
+.sub{color:var(--mute);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:14px}
+.status{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--mute);flex:none}
+.on .dot{background:var(--accent)}
+.status b{font-size:18px;display:block}
+label{display:block;font-size:13px;color:var(--mute);margin:14px 0 6px}
+.field{display:flex;gap:8px}
+input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+input:focus{outline:2px solid var(--accent);outline-offset:1px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:10px 14px}
+button.main{width:100%;margin-top:18px;padding:14px;font-weight:650;font-size:16px;background:var(--accent);color:var(--accent-ink);border:0}
+button.main.off{background:var(--danger);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+.mini{padding:0 12px;white-space:nowrap}
+.kv{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.kv span:first-child{color:var(--mute)}
+.dev{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.dev small{color:var(--mute)}
+.banner{border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:14px;white-space:pre-wrap}
+.err{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 35%,transparent)}
+.note{background:color-mix(in srgb,var(--warn) 12%,transparent);color:var(--ink);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent)}
+code{background:var(--chip);padding:8px 10px;border-radius:8px;display:block;margin-top:8px;font:13px ui-monospace,monospace;overflow:auto}
+.check{font-size:13px;padding:4px 0;color:var(--mute)}
+.check i{font-style:normal;display:inline-block;width:18px}
+.ok i{color:var(--accent)} .FAIL i{color:var(--danger)} .warn i{color:var(--warn)}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+  <header><h1>dualhot</h1><span class="sub">WiFi hotspot, while you stay on WiFi</span></header>
+
+  <div id="error" class="banner err hide"></div>
+
+  <section class="card" id="setup">
+    <b id="setupTitle">Checking this computer…</b>
+    <div id="setupVerdict" class="sub" style="margin:6px 0 10px"></div>
+    <div id="checks"></div>
+    <div id="installBox" class="hide">
+      <div class="sub" style="margin-top:10px">Run this in a terminal, then press Re-check:</div>
+      <code id="installCmd"></code>
+    </div>
+    <button id="recheck" style="margin-top:12px">Re-check</button>
+  </section>
+
+  <section class="card hide" id="panel">
+    <div class="status" id="statusRow">
+      <span class="dot"></span>
+      <div><b id="statusTitle">Hotspot is off</b><span class="sub" id="statusSub"></span></div>
+    </div>
+
+    <div id="formBox">
+      <label for="ssid">Network name</label>
+      <input id="ssid" maxlength="32" autocomplete="off" spellcheck="false">
+      <label for="pass">Password (8 or more characters)</label>
+      <div class="field">
+        <input id="pass" type="password" maxlength="63" autocomplete="off" spellcheck="false">
+        <button class="mini" id="eye" type="button">Show</button>
+      </div>
+    </div>
+
+    <div id="liveBox" class="hide">
+      <div class="kv"><span>Name</span><span id="vName"></span></div>
+      <div class="kv"><span>Password</span><span><span id="vPass">••••••••</span> <button class="mini" id="copyPass" style="padding:4px 10px;margin-left:6px">Copy</button></span></div>
+      <div class="kv"><span>How it runs</span><span id="vMode"></span></div>
+    </div>
+
+    <button class="main" id="go">Turn on hotspot</button>
+  </section>
+
+  <section class="card hide" id="devBox">
+    <b>Connected devices <span class="sub" id="devCount"></span></b>
+    <div id="devs"></div>
+  </section>
+</main>
+
+<script>
+const TOKEN="__TOKEN__";
+const $=id=>document.getElementById(id);
+const api=(p,opt={})=>fetch(p,{...opt,headers:{"X-Token":TOKEN,"Content-Type":"application/json"}}).then(r=>r.json());
+let doctorReady=false, last={}, shown=false, filled=false;
+
+async function checkDoctor(){
+  $("setupTitle").textContent="Checking this computer…";
+  const d=await api("/api/doctor");
+  doctorReady=!!d.Ready;
+  $("setupTitle").textContent=doctorReady?"This computer is ready":"Setup needed";
+  $("setupVerdict").textContent=d.Verdict||"";
+  const mark={ok:"✓",warn:"!",FAIL:"✗",info:"·"};
+  $("checks").innerHTML=(d.Checks||[]).filter(c=>c.Level!=="info"||!c.Detail.startsWith("sudo")).map(c=>
+    `<div class="check ${c.Level}"><i>${mark[c.Level]||"·"}</i>${esc(c.Text)}${c.Detail&&!c.Detail.startsWith("sudo ")?` <span style="opacity:.8">— ${esc(c.Detail)}</span>`:""}</div>`).join("");
+  const inst=(d.Checks||[]).find(c=>c.Detail&&/^(sudo|install:)/.test(c.Detail)&&c.Text.startsWith("install"));
+  $("installBox").classList.toggle("hide",!inst);
+  if(inst)$("installCmd").textContent=inst.Detail;
+  $("setup").classList.toggle("hide",doctorReady&&shown);
+  $("panel").classList.toggle("hide",!doctorReady);
+  render();
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+
+function fmt(sec){const m=Math.floor(sec/60);return m<1?"just started":m<60?m+" min":Math.floor(m/60)+" h "+(m%60)+" min"}
+
+function render(){
+  const s=last, on=!!s.running, busy=!!s.starting&&!on;
+  if(s.saved&&!filled){$("ssid").value=s.saved.ssid;$("pass").value=s.saved.pass;filled=true}
+  $("statusRow").classList.toggle("on",on);
+  $("statusTitle").textContent=on?"Hotspot is on":busy?"Starting…":"Hotspot is off";
+  $("statusSub").textContent=on?"on for "+fmt(s.seconds||0):busy?"Approve the password prompt on your screen":"";
+  $("formBox").classList.toggle("hide",on);
+  $("liveBox").classList.toggle("hide",!on);
+  if(on){$("vName").textContent=s.ssid;$("vMode").textContent=(s.mode==="concurrent"?"same WiFi chip":"own adapter")+", channel "+s.channel}
+  const g=$("go");
+  g.textContent=on?"Turn off hotspot":busy?"Starting…":"Turn on hotspot";
+  g.classList.toggle("off",on); g.disabled=busy;
+  const e=$("error"); e.textContent=s.error||""; e.classList.toggle("hide",!s.error);
+  $("devBox").classList.toggle("hide",!on);
+  if(on){
+    const d=s.devices||[];
+    $("devCount").textContent=d.length?"("+d.length+")":"";
+    $("devs").innerHTML=d.length?d.map(x=>`<div class="dev"><span>${esc(x.Name)}<br><small>${esc(x.MAC)}</small></span><span>${esc(x.IP)}</span></div>`).join(""):`<div class="sub" style="padding-top:8px">Nobody yet. Connect a phone to “${esc(s.ssid)}”.</div>`;
+  }
+}
+
+async function poll(){
+  try{last=await api("/api/state");shown=true;render();if(doctorReady)$("setup").classList.add("hide")}catch(e){}
+}
+
+$("go").onclick=async()=>{
+  if(last.running){await api("/api/stop",{method:"POST"});return}
+  const r=await api("/api/start",{method:"POST",body:JSON.stringify({ssid:$("ssid").value,pass:$("pass").value})});
+  if(r.error){last.error=r.error;render()}else{last.starting=true;last.error="";render()}
+};
+$("eye").onclick=()=>{const p=$("pass");const h=p.type==="password";p.type=h?"text":"password";$("eye").textContent=h?"Hide":"Show"};
+$("copyPass").onclick=async()=>{const p=last.saved&&last.saved.pass||"";$("vPass").textContent=p;try{await navigator.clipboard.writeText(p);$("copyPass").textContent="Copied"}catch(e){$("copyPass").textContent="Shown"}setTimeout(()=>{$("copyPass").textContent="Copy"},1500)};
+$("recheck").onclick=checkDoctor;
+
+checkDoctor().then(()=>{poll();setInterval(poll,2000)});
+</script>
+</body>
+</html>

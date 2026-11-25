@@ -2,15 +2,18 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/manuutechy/dualhot/internal/doctor"
+	"github.com/manuutechy/dualhot/internal/gui"
 	"github.com/manuutechy/dualhot/internal/hotspot"
 	"github.com/manuutechy/dualhot/internal/sys"
 	"github.com/manuutechy/dualhot/internal/wifi"
@@ -21,6 +24,7 @@ var version = "0.1.0"
 const usage = `dualhot %s: a WiFi hotspot that works while you stay connected to WiFi
 
 Usage:
+  dualhot gui               open the app window (recommended)
   dualhot doctor            check if this machine can do it (no root needed)
   sudo dualhot start        start the hotspot (Ctrl+C stops it)
   sudo dualhot stop         stop it and clean up
@@ -30,6 +34,7 @@ Usage:
 Start options:
   --ssid NAME      hotspot name       (default: dualhot-<hostname>)
   --pass PASSWORD  8-63 characters    (default: random, printed once)
+  --pass-stdin     read the password from stdin (used by the app)
   --channel N      only for a dedicated adapter; in same-chip mode the hotspot
                    follows your WiFi's channel automatically
   --country CC     two-letter code, e.g. KE (default: system setting)
@@ -60,6 +65,11 @@ func main() {
 		if !rep.Ready {
 			os.Exit(1)
 		}
+	case "gui":
+		self, _ := os.Executable()
+		if err := gui.Run(self); err != nil {
+			fatal("%v", err)
+		}
 	case "start":
 		cmdStart(os.Args[2:])
 	case "stop":
@@ -87,7 +97,12 @@ func cmdStart(args []string) {
 	fs.StringVar(&cfg.Subnet, "subnet", "", "")
 	fs.BoolVar(&cfg.Hidden, "hidden", false, "")
 	fs.BoolVar(&cfg.DryRun, "dry-run", false, "")
+	passStdin := fs.Bool("pass-stdin", false, "")
 	_ = fs.Parse(args)
+	if *passStdin {
+		line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+		cfg.Pass = strings.TrimRight(line, "\r\n")
+	}
 
 	if os.Geteuid() != 0 && !cfg.DryRun {
 		fatal("starting a hotspot needs root. Run: sudo dualhot start")
