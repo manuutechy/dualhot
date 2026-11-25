@@ -19,7 +19,7 @@ import (
 	"github.com/manuutechy/dualhot/internal/wifi"
 )
 
-var version = "0.1.0"
+var version = "0.2.1"
 
 const usage = `dualhot %s: a WiFi hotspot that works while you stay connected to WiFi
 
